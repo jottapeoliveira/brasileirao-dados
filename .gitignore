@@ -28,3 +28,4 @@ venv/
 # Credenciais: nunca versione senhas ou chaves de acesso
 .env
 kaggle.json
+dados/cache/
