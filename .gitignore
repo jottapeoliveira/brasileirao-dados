@@ -19,3 +19,5 @@ dados/cache/
 dados/prata/*
 dados/ouro/*
 relatorios/
+
+!dados/prata/proveniencia.jsonl

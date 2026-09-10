@@ -1,0 +1,1 @@
+{"origem": "partidas_20260820.csv", "arquivo_prata": "partidas.parquet", "linhas_antes": 10296, "linhas_depois": 10296, "decisoes": ["Colunas redundantes (total_corners, at_diff, ht_diff, at_result) removidas."], "transformado_em": "2026-09-10T16:21:48"}

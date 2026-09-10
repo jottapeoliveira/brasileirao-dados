@@ -18,3 +18,8 @@ Projeto focado na ingestão e estruturação de estatísticas do Campeonato Bras
 * Redundância: Colunas de saldo e resultado (`at_diff`, `ht_diff`, `at_result`) são altamente correlacionadas com os gols.
 * Dados ausentes: Aproximadamente 23% de valores nulos nas colunas de estatísticas (`home_attack`, `away_attack`, `home_shots`, `away_shots`).
 * Zeros: Alta concentração de zeros nas colunas de gols e escanteios (comportamento normal da regra do esporte).
+
+## Decisões de tratamento
+### Brasileirão
+* Colunas redundantes removidas: `total_corners`, `at_diff`, `ht_diff` e `at_result`. Motivo: a informação já existe na base pela soma ou diferença de outras variáveis.
+* Valores ausentes em estatísticas numéricas foram mantidos. Motivo: a remoção descartaria aproximadamente 23% da base.
