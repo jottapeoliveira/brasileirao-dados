@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 import pandas as pd
+import limpeza  # Importando o módulo genérico que criamos
 
 BRONZE = Path("dados/bronze/brasileirao")
 PRATA = Path("dados/prata")
@@ -18,6 +19,27 @@ def carregar():
 def remover_redundantes(df):
     colunas_remover = ["total_corners", "at_diff", "ht_diff", "at_result"]
     return df.drop(columns=colunas_remover)
+
+def padronizar_textos(df):
+    """Usa o módulo de limpeza para padronizar as colunas de texto dos times."""
+    df = limpeza.tirar_espacos(df)
+    
+    # Criando chaves de texto limpas para futuros cruzamentos (sem acento e minúsculo)
+    if "home" in df.columns:
+        df["home_limpo"] = limpeza.chave_texto(df["home"])
+    if "away" in df.columns:
+        df["away_limpo"] = limpeza.chave_texto(df["away"])
+        
+    return df
+
+def criar_atributos_derivados(df):
+    """Cria colunas novas que ajudam a responder à pergunta norteadora do projeto."""
+    if "home_goal" in df.columns and "away_goal" in df.columns:
+        df["total_gols"] = df["home_goal"] + df["away_goal"]
+        df["saldo_gols_mandante"] = df["home_goal"] - df["away_goal"]
+        
+    print("Atributos derivados criados: total_gols, saldo_gols_mandante")
+    return df
 
 def salvar(df):
     PRATA.mkdir(parents=True, exist_ok=True)
@@ -44,10 +66,15 @@ def main():
     antes_linhas = len(df)
     
     df = remover_redundantes(df)
+    df = padronizar_textos(df)
+    df = criar_atributos_derivados(df)
+    
     destino = salvar(df)
     
     registrar(origem, destino, antes_linhas, len(df), [
-        "Colunas redundantes (total_corners, at_diff, ht_diff, at_result) removidas."
+        "Colunas redundantes removidas.",
+        "Textos padronizados com o módulo limpeza.py.",
+        "Atributos derivados criados: total_gols e saldo_gols_mandante."
     ])
 
 if __name__ == "__main__":

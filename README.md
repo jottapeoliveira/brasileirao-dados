@@ -23,3 +23,10 @@ Projeto focado na ingestão e estruturação de estatísticas do Campeonato Bras
 ### Brasileirão
 * Colunas redundantes removidas: `total_corners`, `at_diff`, `ht_diff` e `at_result`. Motivo: a informação já existe na base pela soma ou diferença de outras variáveis.
 * Valores ausentes em estatísticas numéricas foram mantidos. Motivo: a remoção descartaria aproximadamente 23% da base.
+
+## Atributos derivados
+### total_gols
+Soma dos gols marcados pelo mandante e pelo visitante na partida. Serve para analisar o volume ofensivo global de cada jogo do Brasileirão.
+
+### saldo_gols_mandante
+Diferença entre os gols do mandante e do visitante. Serve para medir a superioridade ou o desempenho do time da casa em relação ao visitante.
