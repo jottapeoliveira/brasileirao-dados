@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: prata
+    schema: prata
+    description: Tabelas da camada prata, carregadas no banco pelo src/carga.py
+    tables:
+      - name: clubes
+        description: Clubes da Serie A no cadastro do Transfermarkt (uma linha por clube)
+      - name: partidas_enriquecido
+        description: Partidas juntadas ao cadastro de clubes pelo mandante e pelo visitante

@@ -1,0 +1,9 @@
+# Fica dentro do repositorio: o dbt procura primeiro na pasta onde roda (ecox14/).
+# O caminho e relativo a essa pasta, entao funciona em qualquer maquina. Nao ha senha aqui.
+ecox14:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ../dados/ouro/projeto.duckdb
+      schema: ouro

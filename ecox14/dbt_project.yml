@@ -1,0 +1,11 @@
+name: ecox14
+version: "1.0.0"
+config-version: 2
+profile: ecox14
+
+model-paths: ["models"]
+clean-targets: ["target"]
+
+models:
+  ecox14:
+    +materialized: table

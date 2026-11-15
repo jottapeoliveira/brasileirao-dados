@@ -1,11 +1,21 @@
 dados/bronze/*
 dados/prata/*
 dados/ouro/*
+dados/cache/
 !dados/**/.gitkeep
+!dados/prata/proveniencia.jsonl
+
+relatorios/
+pipeline.log
+
+# dbt: gerados a cada execucao
+ecox14/target/
+ecox14/logs/
+ecox14/dbt_packages/
+ecox14/.user.yml
 
 __pycache__/
 *.pyc
-
 .venv/
 venv/
 
@@ -14,10 +24,3 @@ venv/
 
 .env
 kaggle.json
-dados/cache/
-
-dados/prata/*
-dados/ouro/*
-relatorios/
-
-!dados/prata/proveniencia.jsonl
