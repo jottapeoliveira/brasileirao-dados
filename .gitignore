@@ -19,6 +19,9 @@ __pycache__/
 .venv/
 venv/
 
+# programa do DuckDB baixado para a interface (aula 11): nao e codigo do projeto
+duckdb.exe
+
 .vscode/
 .idea/
 
