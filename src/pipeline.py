@@ -42,16 +42,18 @@ def etapa_carga():
     carga.main()
 
 
-def etapa_modelagem():
-    import carga
-
+def dbt(comando):
     # mesmo Python do pipeline: nao depende do PATH nem de ativar o ambiente virtual
     subprocess.run(
-        [sys.executable, "-m", "dbt.cli.main", "run"],
+        [sys.executable, "-m", "dbt.cli.main", comando],
         cwd=config.PASTA_DBT,
         check=True,  # se o dbt falhar, o pipeline para em vez de dizer que deu certo
     )
-    carga.conferir_ouro()
+
+
+def etapa_modelagem():
+    dbt("run")   # constroi a ouro
+    dbt("test")  # cobra as regras do schema.yml e de tests/; teste que falha para o pipeline
 
 
 ETAPAS = [

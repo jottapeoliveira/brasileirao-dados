@@ -1,0 +1,141 @@
+version: 2
+
+models:
+  - name: dim_clube
+    description: >
+      Clubes da Serie A no cadastro do Transfermarkt. Grao: uma linha por clube.
+      E um retrato atual (temporadas 2024 e 2025), nao o elenco da data de cada partida.
+    columns:
+      - name: clube_id
+        description: Codigo do clube no Transfermarkt (club_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: nome
+        description: Nome oficial do clube no Transfermarkt.
+        data_tests:
+          - not_null
+      - name: codigo
+        description: Apelido curto do clube na URL do Transfermarkt.
+      - name: estadio
+        description: Nome do estadio principal.
+      - name: capacidade_estadio
+        description: Lugares no estadio principal.
+      - name: tamanho_elenco
+        description: Numero de jogadores no elenco atual.
+      - name: idade_media
+        description: Idade media do elenco atual, em anos.
+      - name: pct_estrangeiros
+        description: Percentual de estrangeiros no elenco.
+      - name: jogadores_selecao
+        description: Jogadores do elenco convocados para selecoes nacionais.
+      - name: saldo_transferencias_mi_eur
+        description: Saldo de transferencias (vendas menos compras), em milhoes de euros.
+      - name: ultima_temporada
+        description: Ultima temporada do clube no cadastro.
+      - name: valor_mercado_elenco_mi_eur
+        description: >
+          Soma do valor de mercado dos jogadores do elenco atual, em milhoes de euros.
+          Calculada a partir do players.csv, porque o total_market_value vem vazio.
+        data_tests:
+          - not_null
+      - name: jogadores_avaliados
+        description: Quantos jogadores entraram na soma do valor de mercado.
+
+  - name: fato_partida
+    description: >
+      Uma linha por partida (um campeonato, uma data, um mandante, um visitante), so as
+      partidas com os dois clubes no cadastro do Transfermarkt.
+    columns:
+      - name: partida_id
+        description: Hash curto de campeonato, data, mandante e visitante.
+        data_tests:
+          - unique
+          - not_null
+      - name: data
+        description: Data da partida.
+        data_tests:
+          - not_null
+      - name: horario
+        description: Horario de inicio.
+      - name: campeonato
+        description: Serie A, Serie B, Serie C ou Copa do Brasil.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Serie A', 'Serie B', 'Serie C', 'Copa do Brasil']
+      - name: clube_mandante_id
+        description: Clube que jogou em casa.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_clube')
+                field: clube_id
+      - name: clube_visitante_id
+        description: Clube visitante.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_clube')
+                field: clube_id
+      - name: gols_mandante
+        description: Gols do mandante no tempo normal.
+        data_tests:
+          - not_null
+      - name: gols_visitante
+        description: Gols do visitante no tempo normal.
+        data_tests:
+          - not_null
+      - name: total_gols
+        description: Gols do mandante mais gols do visitante.
+      - name: saldo_gols_mandante
+        description: Gols do mandante menos gols do visitante.
+      - name: escanteios_mandante
+        description: Escanteios a favor do mandante.
+      - name: escanteios_visitante
+        description: Escanteios a favor do visitante.
+      - name: ataques_mandante
+        description: Ataques do mandante. Vazio em parte das partidas antigas.
+      - name: ataques_visitante
+        description: Ataques do visitante. Vazio em parte das partidas antigas.
+      - name: chutes_mandante
+        description: Finalizacoes do mandante. Vazio em parte das partidas antigas.
+      - name: chutes_visitante
+        description: Finalizacoes do visitante. Vazio em parte das partidas antigas.
+      - name: resultado_intervalo
+        description: Resultado do mandante no intervalo (WON, DRAW, LOST).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['WON', 'DRAW', 'LOST']
+      - name: resultado
+        description: Quem venceu a partida.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mandante', 'empate', 'visitante']
+      - name: vitoria_mandante
+        description: Verdadeiro quando o mandante venceu. E o que a pergunta norteadora quer explicar.
+        data_tests:
+          - not_null
+      - name: dif_idade_media
+        description: Idade media do elenco do mandante menos a do visitante.
+      - name: dif_valor_mercado_mi_eur
+        description: >
+          Valor de mercado do elenco do mandante menos o do visitante, em milhoes de euros.
+          Positivo quando o mandante tem o elenco mais caro.
+
+  - name: vw_partida_completa
+    description: A fato com os nomes, o estadio e o valor de mercado dos dois clubes.
+    columns:
+      - name: partida_id
+        description: Mesmo identificador da fato.
+        data_tests:
+          - unique
+      - name: mandante
+        description: Nome do clube mandante.
+      - name: visitante
+        description: Nome do clube visitante.

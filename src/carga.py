@@ -1,6 +1,6 @@
-"""Carga: leva a Prata para dentro do DuckDB. A Ouro e construida pelo dbt (pasta ecox14/).
+"""Carga: leva a Prata para dentro do DuckDB. A Ouro e construida e testada pelo dbt (pasta ecox14/).
 
-construir_ouro() ficou aqui, sem ser chamada, para comparar com o dbt: e o SQL da aula 9.
+construir_ouro() e conferir() ficaram aqui, sem ser chamadas, para comparar com o dbt: sao o SQL da aula 9.
 """
 import logging
 
@@ -140,7 +140,8 @@ def conferir(con):
 
 
 def conferir_ouro():
-    """Chamada pelo pipeline depois do dbt, numa conexao propria."""
+    """Versao da aula 9. Desde a aula 11 as conferencias sao testes do dbt (ecox14/models/schema.yml
+    e ecox14/tests/), que rodam com dbt test e param o pipeline sozinhos. Ficou para comparar."""
     con = conectar()
     try:
         conferir(con)
