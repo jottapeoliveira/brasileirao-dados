@@ -8,6 +8,8 @@ DuckDB.
 Kaggle (partidas) ─┐                                          ┌─ ouro.dim_clube
                    ├─ bronze ─ prata ─ enriquecimento ─ carga ─ dbt ─┼─ ouro.fato_partida
 Kaggle (clubes) ───┘   CSV     Parquet    Parquet       DuckDB       └─ ouro.vw_partida_completa
+                                                                    │
+                                                    dbt test (22 regras) → painel Streamlit (só lê)
 ```
 
 ## Tema e pergunta norteadora
@@ -140,7 +142,9 @@ pip install -r requirements.txt
 
 python src/pipeline.py                  # tudo, desde o Kaggle
 python src/pipeline.py transformacao    # retoma do meio, sem baixar de novo
-python src/pipeline.py modelagem        # só o dbt e as conferências
+python src/pipeline.py modelagem        # só o dbt: constrói a ouro e roda os testes
+
+streamlit run dashboard/painel.py       # o painel, depois do pipeline (Ctrl+C para parar)
 ```
 
 As etapas, em ordem: `ingestao`, `transformacao`, `enriquecimento`, `carga`, `modelagem`.
@@ -193,10 +197,8 @@ A dimensão entra duas vezes, uma para cada papel do clube na partida.
 * **Sem `dim_tempo`:** a data está na fato e basta para as perguntas do projeto.
 
 ### Conferências da ouro
-Rodam depois do dbt (`carga.conferir_ouro`) e todas precisam dar zero; se alguma não der, o
-pipeline para:
-`clube_id` repetido na dim, `partida_id` repetido na fato, fato sem mandante na dim, fato sem
-visitante na dim, e view com número de linhas diferente da fato.
+Desde a aula 11 são testes do dbt (ver "Testes do dado" abaixo). As consultas da aula 9 ficaram
+em `carga.conferir`, sem ser chamadas, para comparar.
 
 ### Exemplo de consulta para a pergunta norteadora
 O mandante vence mais quando tem o elenco mais caro?
@@ -229,8 +231,8 @@ ecox14/
 * **`profiles.yml` dentro do repositório**, com caminho relativo, em vez de
   `C:\Users\<usuario>\.dbt`: o projeto roda em qualquer máquina sem editar nada, e o arquivo não
   tem senha.
-* **O pipeline chama `python -m dbt.cli.main run`** com o mesmo Python do pipeline, com
-  `check=True`: se o dbt falhar, o pipeline para.
+* **O pipeline chama `python -m dbt.cli.main run` e depois `test`** com o mesmo Python do
+  pipeline, com `check=True`: se o dbt falhar ou um teste falhar, o pipeline para.
 * **`construir_ouro` ficou comentada no `carga.py`** para comparar as duas formas.
 * **Verificação da migração:** a ouro do dbt foi comparada com a do SQL antigo (`EXCEPT` nos dois
   sentidos): 24, 3.028 e 3.028 linhas, zero diferença.
@@ -244,3 +246,113 @@ dbt run --select dim_clube+      # só a dimensão e o que depende dela
 
 `Database Error: file is locked` significa que o banco está aberto em outro lugar (um notebook,
 outro terminal): feche a outra conexão e rode de novo.
+
+## Testes do dado
+
+Um teste é uma consulta que precisa devolver **zero linhas**: ele procura o defeito, e passar é não
+achar nada. Os testes rodam na etapa `modelagem`, logo depois do `dbt run`, e se um falhar o
+pipeline para. As conferências que antes só imprimiam um número no log viraram regras cobradas.
+
+**Testes prontos** (declarados em `ecox14/models/schema.yml`, o dbt escreve o SQL):
+
+| Coluna | Regra |
+|---|---|
+| `dim_clube.clube_id` | `unique`, `not_null` |
+| `dim_clube.nome`, `valor_mercado_elenco_mi_eur` | `not_null` |
+| `fato_partida.partida_id` | `unique`, `not_null` |
+| `fato_partida.clube_mandante_id`, `clube_visitante_id` | `not_null`, `relationships` com `dim_clube` (nenhum fato órfão) |
+| `fato_partida.campeonato` | `accepted_values`: Serie A, B, C, Copa do Brasil |
+| `fato_partida.resultado` | `accepted_values`: mandante, empate, visitante |
+| `fato_partida.resultado_intervalo` | `accepted_values`: WON, DRAW, LOST |
+| `fato_partida.data`, gols, `vitoria_mandante` | `not_null` |
+| `vw_partida_completa.partida_id` | `unique` |
+
+**Testes escritos à mão** (`ecox14/tests/`), para o que nenhum teste pronto cobre:
+* `grao_fato_partida.sql`: o grão composto (campeonato, data, mandante, visitante) não se repete.
+* `view_mesmo_tamanho_da_fato.sql`: a view, que junta a `dim_clube` duas vezes, não ganha nem perde
+  partidas.
+* `gols_coerentes.sql`: `total_gols`, `saldo_gols_mandante` e `resultado` batem com os gols, e
+  nenhum gol é negativo.
+
+Total: 22 testes, todos passando. Foi conferido que um erro proposital no `fato_partida.sql` faz
+dois testes falharem e o pipeline parar.
+
+```
+cd ecox14
+dbt test                                           # roda os 22
+dbt test --select fato_partida                     # só os da fato
+dbt test --select gols_coerentes --store-failures  # grava as linhas que falharam, para investigar
+```
+
+## Documentação (dbt docs)
+
+As descrições de tabelas e colunas estão no mesmo `schema.yml` dos testes, então não ficam
+desatualizadas: se o modelo muda, a descrição está ao lado.
+
+```
+cd ecox14
+dbt docs generate
+dbt docs serve        # abre o site com o grafo dos modelos e a descrição de cada coluna
+```
+
+Para ver as linhas de verdade, a interface do DuckDB (o `duckdb.exe`, baixado de duckdb.org,
+fica na raiz e fora do Git):
+
+```
+.\duckdb.exe -ui dados/ouro/projeto.duckdb     # abre em localhost:4213
+```
+
+Feche o painel e o pipeline antes: o DuckDB trava o arquivo.
+
+## Painel (Streamlit)
+
+O painel é **consumidor**: lê a ouro e não escreve nada, por isso fica fora do pipeline, na pasta
+`dashboard/`, e abre o banco com `read_only=True` (não trava o dbt, e o banco recusa qualquer
+consulta que altere dado).
+
+```
+dashboard/
+  consultas.py    todo o SQL de leitura, uma função por pergunta, valores sempre como parâmetro (?)
+  painel.py       só a tela, sem nenhuma linha de SQL
+```
+
+O que a tela mostra, com filtro de campeonato e de anos:
+* **Números gerais:** partidas e percentual de vitória do mandante, empate e visitante.
+* **Fora de campo:** % de vitória do mandante por faixa de diferença de valor do elenco.
+* **Dentro de campo:** % de vitória do mandante quando teve mais ou menos finalizações, ataques e
+  escanteios que o visitante.
+* **Por clube:** valor do elenco ao lado do aproveitamento em casa.
+* **Rodapé:** as fontes e a data de extração, lidas da proveniência da bronze.
+
+### O que os dados mostram (Série A, 2014 a 2023, 2.559 partidas)
+
+| Diferença de valor do elenco | Partidas | % vitória do mandante |
+|---|---|---|
+| visitante mais de 100 mi € mais caro | 322 | 36,0 |
+| visitante 30 a 100 mi € mais caro | 608 | 43,6 |
+| elencos parecidos (até 30 mi €) | 698 | 54,7 |
+| mandante 30 a 100 mi € mais caro | 607 | 50,2 |
+| mandante mais de 100 mi € mais caro | 324 | 59,3 |
+
+* **Fora de campo, o valor do elenco pesa:** o mandante vence 36% quando o visitante é muito mais
+  caro e 59% quando ele é que é muito mais caro.
+* **Dentro de campo, o sinal se inverte:** o mandante vence 57% das partidas em que teve **menos**
+  ataques ou escanteios, e 41% a 45% das que teve mais. A explicação provável é o efeito placar:
+  quem está perdendo ataca mais, e quem está ganhando recua. Finalizações quase não separam (48% x
+  46%). Ou seja, estatística de volume mede como o jogo se desenrolou, não o que o decidiu.
+* **Cautela:** o valor do elenco é o atual, aplicado a temporadas antigas, e Ceará, Fortaleza,
+  Juventude e Sport têm só 4 a 8 jogadores com valor no cadastro, então o valor deles está
+  subestimado. A base não tem posse de bola nem chutes no gol.
+
+## Governança
+
+* **De onde veio cada número:** a proveniência é gravada desde a ingestão (`proveniencia.json` na
+  bronze e `proveniencia.jsonl` na prata) e o painel mostra a fonte no rodapé.
+* **Quem pode ver:** o projeto só usa dados públicos e agregados por clube e partida; o banco e o
+  painel rodam na máquina local.
+* **Dado pessoal (LGPD):** o `players.csv` tem nome e data de nascimento de jogadores, mas o
+  projeto só usa o valor de mercado **somado por clube**; nenhum dado de jogador chega à prata
+  agregada nem à ouro. Com dado pessoal de verdade, o certo seria coletar só o necessário, dizer
+  para que serve, ter prazo de descarte e controlar quem acessa.
+* **Se um número estiver errado:** os 22 testes impedem que a ouro seja publicada quebrada, e
+  como bronze, prata e ouro ficam guardadas, dá para refazer o cálculo de qualquer número.
